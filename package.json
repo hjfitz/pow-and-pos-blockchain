@@ -1,0 +1,11 @@
+{
+  "name": "DISPARP-parallel-authenticity",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:hjfitz/DISPARP-parallel-authenticity.git",
+  "author": "harry fitzgerald <hfitz83@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "crypto-js": "^3.1.9-1"
+  }
+}
