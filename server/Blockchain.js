@@ -3,13 +3,13 @@ const b64 = require('crypto-js/enc-base64')
 const debug = require('debug')('disparp:blockchain')
 
 module.exports = class Blockchain {
-	constructor(chain = [], prevHash = '') {
-		this.chain = chain
+	constructor(blocks = [], prevHash = '') {
+		this.blocks = blocks
 		this.prevHash = prevHash
 	}
 
 	get prevLocation() {
-		return this.chain[this.chain.length - 1].location
+		return this.blocks.length ? this.blocks[this.blocks.length - 1].location : 0
 	}
 
 	createGenesisBlock() {
@@ -21,7 +21,7 @@ module.exports = class Blockchain {
 
 	generateHash() {
 		debug('creating hash for new block')
-		const end = this.chain[this.chain.length - 1]
+		const end = JSON.stringify(this.blocks[this.blocks.length - 1])
 		const hash = b64.stringify(sha256(end))
 		debug(`new hash: ${hash}`)
 		return hash
@@ -29,13 +29,14 @@ module.exports = class Blockchain {
 
 	serialize() {
 		return {
-			chain: this.chain,
+			blocks: this.blocks,
 			prevHash: this.prevHash,
 		}
 	}
 
 	add(data) {
-		this.chain.push(data)
 		this.prevHash = this.generateHash()
+		this.blocks.push({ data, prevHash: this.prevHash })
+		this.blocks[this.blocks.length - 1].hash = this.generateHash()
 	}
 }

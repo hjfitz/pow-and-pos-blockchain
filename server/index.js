@@ -14,7 +14,7 @@ server.on('listening', () => {
 // initialise blockchain (stored in memory for now)
 const chain = new Blockchain()
 
-chain.createGenesisBlock()
+// chain.createGenesisBlock()
 
 
 // nodes separated by location
@@ -33,7 +33,11 @@ const getTotalNodes = () => Object.values(
 let readyNodes = []
 
 const getAvailableZones = () => Object.keys(nodeZones).filter((zoneLabel) => {
-	console.log(`zone: ${zoneLabel}; nodes: ${nodeZones[zoneLabel]}; total: ${Object.values(nodeZones[zoneLabel]).length}`)
+	console.log(
+		`zone: ${zoneLabel};`
+		+ ` nodes: ${nodeZones[zoneLabel]};`
+		+ ` total: ${Object.values(nodeZones[zoneLabel]).length}`,
+	)
 	return Object.values(nodeZones[zoneLabel]).length
 })
 
@@ -82,15 +86,52 @@ io.on('connect', (socket) => {
 		const isReady = (((readyNodes.length / total) > 0.5) && total >= 3)
 		debug({ total })
 		if (isReady) {
-			debug('beginning vote')
-			const majorityLocation = readyNodes.reduce((acc, cur) => {
-				if (acc[cur.data.vote]) acc[cur.data.vote]++
-				else acc[cur.data.vote] = 1
+			debug('initialising vote')
+			const flattened = readyNodes
+				.map(node => ({
+					vote: node.data.vote,
+					location: node.data.location,
+					hash: node.data.newBlock.work.curHash,
+					block: node.data.newBlock,
+					id: node.socket.id,
+				}))
+			const minified = flattened
+				.reduce((acc, cur) => {
+					if (!acc[cur.vote]) acc[cur.vote] = [cur.hash]
+					else acc[cur.vote].push(cur.hash)
+					return acc
+				}, {})
+
+			const readyByLocation = flattened.reduce((acc, cur) => {
+				if (!acc[cur.location]) acc[cur.location] = [cur]
+				else acc[cur.location].push(cur)
 				return acc
 			}, {})
-			// double check this
-			const voted = Object.keys(majorityLocation).reduce((a, b) => (majorityLocation[a] > majorityLocation[b] ? a : b))
-			console.log({ voted, majorityLocation })
+			const voted = Object.keys(minified)
+				.reduce((a, b) => (minified[a].length > minified[b].length ? a : b))
+			// debug({ minified, voted })
+			const hash = minified[voted][0] // fetch the first hash
+			const index = parseInt([...hash].splice(0, hash.length / 4).join(''), 16)
+			let toAdd = Object.values(Object.values(readyByLocation)[0])[0]
+			if (readyByLocation[voted]) {
+				const nodes = Object.values(readyByLocation[voted])
+				const nodeIndex = index % nodes.length
+				const { id } = nodes[nodeIndex];
+				[toAdd] = flattened.filter(elem => elem.id === id)
+			}
+			// if (toAdd && 'block' in toAdd) {
+			debug('====adding====')
+			chain.add(toAdd.block)
+			debug('====done adding====')
+			// }
+			readyNodes.forEach((node) => {
+				node.socket.emit('chain', chain.serialize())
+				node.socket.emit('beginTransacting')
+			})
+			readyNodes.length = 0
+
+			// console.log({ nodes, nodeIndex, node })
+			// console.log(nodeZones[voted])// [index % (nodeZones[voted].length)])
 		}
 	})
 
