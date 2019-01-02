@@ -1139,6 +1139,11 @@ path-type@^2.0.0:
   dependencies:
     pify "^2.0.0"
 
+perfy@^1.1.5:
+  version "1.1.5"
+  resolved "https://registry.yarnpkg.com/perfy/-/perfy-1.1.5.tgz#0d629f870a34a3eb1866d3db485d2b3faef29e4b"
+  integrity sha512-/ieVBpMaPTJf83YTUl2TImsSwMEJ23qGP2w27pE6aX+NrB/ZRGqOnQZpl7J719yFwd+ebDiHguPNFeMSamyK7w==
+
 pify@^2.0.0:
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/pify/-/pify-2.3.0.tgz#ed141a6ac043a849ea588498e7dca8b15330e90c"

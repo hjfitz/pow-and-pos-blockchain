@@ -1,5 +1,6 @@
 const http = require('http')
 const socketIO = require('socket.io')
+const perfy = require('perfy')
 const debug = require('debug')('disparp:server')
 const Blockchain = require('./Blockchain')
 
@@ -11,12 +12,11 @@ server.on('listening', () => {
 	debug('server up and running on localhost:8080')
 })
 
+let timerRunning = false
+const results = []
+
 // initialise blockchain (stored in memory for now)
 const chain = new Blockchain()
-
-// chain.createGenesisBlock()
-
-
 // nodes separated by location
 const nodeZones = {
 	0: {},
@@ -35,8 +35,8 @@ let readyNodes = []
 const getAvailableZones = () => Object.keys(nodeZones).filter((zoneLabel) => {
 	console.log(
 		`zone: ${zoneLabel};`
-		+ ` nodes: ${nodeZones[zoneLabel]};`
-		+ ` total: ${Object.values(nodeZones[zoneLabel]).length}`,
+		+ ` num nodes: ${Object.values(nodeZones[zoneLabel]).length}`,
+		+'\n',
 	)
 	return Object.values(nodeZones[zoneLabel]).length
 })
@@ -128,10 +128,15 @@ io.on('connect', (socket) => {
 				node.socket.emit('chain', chain.serialize())
 				node.socket.emit('beginTransacting')
 			})
-			readyNodes.length = 0
+			const result = perfy.end('block-generation')
+			timerRunning = false
+			results.push(result)
+			const totalTime = results.reduce((acc, cur) => acc + parseFloat(cur.time, 10), 0)
+			const average = (totalTime / results.length).toFixed(5)
+			console.log(`transaction time: ${result.time}s; total transactions: ${results.length}; average time: ${average}`)
 
-			// console.log({ nodes, nodeIndex, node })
-			// console.log(nodeZones[voted])// [index % (nodeZones[voted].length)])
+
+			readyNodes.length = 0
 		}
 	})
 
@@ -139,6 +144,12 @@ io.on('connect', (socket) => {
 	// thus relaying it back to everyone else
 	// giving all nodes an equal chance to add their own transactions
 	socket.on('transaction', (data) => {
+		// start on first transaction and end on emission of blockchain.
+		// ensure this doesn't get overwritten.
+		if (!timerRunning) {
+			perfy.start('block-generation')
+			timerRunning = true
+		}
 		io.sockets.emit('transaction', data)
 	})
 })
