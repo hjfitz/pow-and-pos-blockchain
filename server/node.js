@@ -10,6 +10,7 @@ let ready = false
 const socket = io('http://localhost:8080', { path: '/' })
 
 const location = process.env.LOCATION || 1
+let locations = [location]
 
 debug(`attempting to join with location: ${location}`)
 
@@ -21,13 +22,13 @@ socket.on('chain', (data) => {
 })
 
 function generateVote(bChain) {
-	const locations = [1, 2, 3, 4, 5]
 	const { prevLocation } = bChain
-	if (locations.includes(location)) locations.splice(locations.indexOf(location), 1)
-	if (locations.includes(prevLocation)) locations.splice(locations.indexOf(prevLocation), 1)
+	const clonedLocs = [...locations]
+	if (clonedLocs.includes(location)) clonedLocs.splice(clonedLocs.indexOf(location), 1)
+	if (clonedLocs.includes(prevLocation)) clonedLocs.splice(clonedLocs.indexOf(prevLocation), 1)
 	// because genesis is created in location 0
-	debug({ locations })
-	const vote = locations[~~(Math.random() * locations.length)]
+	debug({ clonedLocs })
+	const vote = clonedLocs[~~(Math.random() * clonedLocs.length)]
 	debug('vote:', vote)
 	return vote
 }
@@ -53,6 +54,10 @@ socket.on('transaction', (data) => {
 	}
 })
 
+socket.on('availZones', (data) => {
+	debug('zones get:', data)
+	locations = data
+})
 
 socket.on('beginTransacting', () => {
 	ready = false
