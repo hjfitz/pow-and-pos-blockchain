@@ -5,8 +5,16 @@
   "repository": "git@github.com:hjfitz/DISPARP-parallel-authenticity.git",
   "author": "harry fitzgerald <hfitz83@gmail.com>",
   "license": "MIT",
+  "scripts": {
+    "start:server": "DEBUG=disparp:* node server/index.js",
+    "start:node": "DEBUG=disparp:* node server/node.js",
+    "start:error": "DEBUG=disparp:* node server/node-error.js"
+  },
   "dependencies": {
-    "crypto-js": "^3.1.9-1"
+    "crypto-js": "^3.1.9-1",
+    "debug": "^4.1.1",
+    "socket.io": "^2.2.0",
+    "socket.io-client": "^2.2.0"
   },
   "devDependencies": {
     "eslint": "^5.8.0",
