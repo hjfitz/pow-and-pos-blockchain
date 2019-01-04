@@ -131,15 +131,15 @@ io.on('connect', (socket) => {
 				// console.log({ index, length: nodes.length })
 				const nodeIndex = index % nodes.length
 				// console.log({ nodeIndex })
-				const { id } = nodes[nodeIndex]
-				toAdd = flattened.filter(elem => elem.id === id)[0]
+				const { id } = nodes[nodeIndex];
+				[toAdd] = flattened.filter(elem => elem.id === id)
 			}
 			// if (toAdd && 'block' in toAdd) {
 			debug('====adding====')
 			chain.add(toAdd.block)
 			debug('====done adding====')
 			// }
-			readyNodes.forEach((node, idx) => {
+			readyNodes.forEach((node) => {
 				// console.log(idx)
 				node.socket.emit('chain', chain.serialize())
 				node.socket.emit('beginTransacting')
@@ -150,7 +150,11 @@ io.on('connect', (socket) => {
 				results.push(result)
 				const totalTime = results.reduce((acc, cur) => acc + parseFloat(cur.time, 10), 0)
 				const average = (totalTime / results.length).toFixed(5)
-				console.log(`block time: ${result.time}s; total blocks computed: ${results.length}; average time: ${average}`)
+				console.log(
+					`block time: ${result.time}s;`
+					+ `total blocks computed: ${results.length};`
+					+ `average time: ${average}`,
+				)
 				if (results.length === 100) {
 					console.log(`benchmark with ${getTotalNodes()} nodes complete. Exiting...`)
 					process.exit(0)

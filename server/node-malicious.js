@@ -13,10 +13,7 @@ const Block = require('./Block')
 debug('attempting to join server')
 
 let chain
-let ready = false
-let block = new Block()
 let interval
-let newBlock
 
 const socket = io('http://localhost:8080', { path: '/' })
 
@@ -41,10 +38,10 @@ function validateChain() {
 	console.log(mostRecentBlock.data.transactions)
 	if (mostRecentBlock.data.transactions.includes('erroneous blocks')) {
 		console.log('found error block')
-		errors++
+		errors += 1
 	} else {
 		console.log('error block not found')
-		safe++
+		safe += 1
 	}
 	console.log(`Safe blocks found: ${safe}; Erroneous blocks found: ${errors}`)
 	console.log('====')
@@ -70,7 +67,7 @@ function validateChain() {
 socket.on('chain', (data) => {
 	chain = new Blockchain(data.blocks, data.prevHash)
 	validateChain(chain)
-	block = new Block()
+	// block = new Block()
 	debug('chain recieved')
 })
 
@@ -87,22 +84,22 @@ function generateVote(bChain) {
 }
 
 
-socket.on('transaction', (data) => {
-	// if (block.transactions.length >= 4) {
-	// 	console.time('Proof of Work')
-	// 	if (!ready) { // ignore any further transactions
-	// 		newBlock = block.serialize()
-	// 		const vote = generateVote(chain)
-	// 		// submit a new block to be randomly selected, as well as the vote
-	// 		socket.emit('ready', { newBlock, vote, location })
-	// 		console.timeEnd('Proof of Work')
-	// 		debug('PoW:', newBlock)
-	// 		ready = true
-	// 	}
-	// } else {
-	// 	block.add(data)
-	// }
-})
+// socket.on('transaction', (data) => {
+// 	// if (block.transactions.length >= 4) {
+// 	// 	console.time('Proof of Work')
+// 	// 	if (!ready) { // ignore any further transactions
+// 	// 		newBlock = block.serialize()
+// 	// 		const vote = generateVote(chain)
+// 	// 		// submit a new block to be randomly selected, as well as the vote
+// 	// 		socket.emit('ready', { newBlock, vote, location })
+// 	// 		console.timeEnd('Proof of Work')
+// 	// 		debug('PoW:', newBlock)
+// 	// 		ready = true
+// 	// 	}
+// 	// } else {
+// 	// 	block.add(data)
+// 	// }
+// })
 
 socket.on('availZones', (data) => {
 	debug('zones get:', data)
@@ -121,7 +118,7 @@ const evilBlock = eBlock.serialize()
 debug('malicious PoW complete')
 
 socket.on('beginTransacting', () => {
-	ready = false
+	// ready = false
 	debug('beginning transactions')
 	clearInterval(interval)
 	// interval = setInterval(() => {
