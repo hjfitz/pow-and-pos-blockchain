@@ -1,7 +1,11 @@
+/**
+ * maximum failure, this does not work all of the time
+ */
+
 const io = require('socket.io-client')
 const sha256 = require('crypto-js/sha256')
 const b64 = require('crypto-js/enc-base64')
-const debug = require('debug')('disparp:node')
+const debug = require('debug')('disparp:node-malicious')
 const cloneDeep = require('lodash/cloneDeep')
 const Blockchain = require('./Blockchain')
 const Block = require('./Block')
@@ -25,13 +29,25 @@ socket.emit('join', { location })
 
 const sha = data => b64.stringify(sha256(data))
 
+let errors = 0
+let safe = 0
 
 function validateChain() {
 	debug('validating blockchain')
 	const mostRecentBlock = chain.blocks[0]
 	debug('ensuring integrity of blockchain...')
-	if (!newBlock || !mostRecentBlock) return
-	console.log(mostRecentBlock)
+	if (!mostRecentBlock) return
+	console.log('====')
+	console.log(mostRecentBlock.data.transactions)
+	if (mostRecentBlock.data.transactions.includes('erroneous blocks')) {
+		console.log('found error block')
+		errors++
+	} else {
+		console.log('error block not found')
+		safe++
+	}
+	console.log(`Safe blocks found: ${safe}; Erroneous blocks found: ${errors}`)
+	console.log('====')
 	// make sure all transactions are equal
 	chain.blocks.forEach((block) => {
 		const cloned = cloneDeep(block)
@@ -72,20 +88,20 @@ function generateVote(bChain) {
 
 
 socket.on('transaction', (data) => {
-	if (block.transactions.length >= 4) {
-		console.time('Proof of Work')
-		if (!ready) { // ignore any further transactions
-			newBlock = block.serialize()
-			const vote = generateVote(chain)
-			// submit a new block to be randomly selected, as well as the vote
-			socket.emit('ready', { newBlock, vote, location })
-			console.timeEnd('Proof of Work')
-			debug('PoW:', newBlock)
-			ready = true
-		}
-	} else {
-		block.add(data)
-	}
+	// if (block.transactions.length >= 4) {
+	// 	console.time('Proof of Work')
+	// 	if (!ready) { // ignore any further transactions
+	// 		newBlock = block.serialize()
+	// 		const vote = generateVote(chain)
+	// 		// submit a new block to be randomly selected, as well as the vote
+	// 		socket.emit('ready', { newBlock, vote, location })
+	// 		console.timeEnd('Proof of Work')
+	// 		debug('PoW:', newBlock)
+	// 		ready = true
+	// 	}
+	// } else {
+	// 	block.add(data)
+	// }
 })
 
 socket.on('availZones', (data) => {
@@ -93,13 +109,32 @@ socket.on('availZones', (data) => {
 	locations = data
 })
 
+const eBlock = new Block()
+
+eBlock.add('erroneous blocks')
+eBlock.add('erroneous blocks')
+eBlock.add('erroneous blocks')
+eBlock.add('erroneous blocks')
+eBlock.add('erroneous blocks')
+
+const evilBlock = eBlock.serialize()
+debug('malicious PoW complete')
+
 socket.on('beginTransacting', () => {
 	ready = false
 	debug('beginning transactions')
 	clearInterval(interval)
+	// interval = setInterval(() => {
+	// 	debug('emitting transaction')
+	// 	if (!ready) socket.emit('transaction', 'erroneous blocks')
+	// }, 500)
 	interval = setInterval(() => {
 		debug('emitting transaction')
-		if (!ready) socket.emit('transaction', `test data: ${new Date().getTime()}`)
+		// socket.emit('transaction', 'erroneous blocks')
+		// newBlock = block.serialize()
+		const vote = generateVote(chain)
+		// submit a new block to be randomly selected, as well as the vote
+		socket.emit('ready', { newBlock: evilBlock, vote, location })
 	}, 500)
 })
 
@@ -107,8 +142,6 @@ socket.on('stopTransacting', () => {
 	debug('stopping transactions')
 	clearInterval(interval)
 })
-
-
 socket.on('disconnect', () => {
 	debug('server down. exiting with code 1')
 	process.exit(1)

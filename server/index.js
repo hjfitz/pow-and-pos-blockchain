@@ -79,11 +79,22 @@ io.on('connect', (socket) => {
 		const total = getTotalNodes()
 		debug(`ready nodes: ${readyNodes.length}; total nodes: ${total}`)
 
+		// console.log('===trans')
+		// console.log(data.newBlock.transactions)
+		// console.log('===')
+
 		// make sure ready nodes is unique (cast to set then to array)
 		readyNodes = [...new Set(readyNodes)]
+		// console.log('===ready')
+		// console.log(readyNodes)
+		// console.log('===')
 
 		// calculate readiness criteria
-		const isReady = (((readyNodes.length / total) > 0.5) && total >= 3)
+		const percReady = readyNodes.length / total
+		const moreThan3 = total > 3
+
+
+		const isReady = (percReady > 0.5 && moreThan3)
 		debug({ total })
 		if (isReady) {
 			debug('initialising vote')
@@ -107,36 +118,48 @@ io.on('connect', (socket) => {
 				else acc[cur.location].push(cur)
 				return acc
 			}, {})
+			// console.log(readyByLocation)
 			const voted = Object.keys(minified)
 				.reduce((a, b) => (minified[a].length > minified[b].length ? a : b))
 			// debug({ minified, voted })
 			const hash = minified[voted][0] // fetch the first hash
-			const index = parseInt([...hash].splice(0, hash.length / 4).join(''), 16)
+			const index = parseInt([...hash].splice(0, (hash.length / 8)).join(''), 16)
 			let toAdd = Object.values(Object.values(readyByLocation)[0])[0]
 			if (readyByLocation[voted]) {
+				// console.log(`found one by location. location: ${voted}`)
 				const nodes = Object.values(readyByLocation[voted])
+				// console.log({ index, length: nodes.length })
 				const nodeIndex = index % nodes.length
-				const { id } = nodes[nodeIndex];
-				[toAdd] = flattened.filter(elem => elem.id === id)
+				// console.log({ nodeIndex })
+				const { id } = nodes[nodeIndex]
+				toAdd = flattened.filter(elem => elem.id === id)[0]
 			}
 			// if (toAdd && 'block' in toAdd) {
 			debug('====adding====')
 			chain.add(toAdd.block)
 			debug('====done adding====')
 			// }
-			readyNodes.forEach((node) => {
+			readyNodes.forEach((node, idx) => {
+				// console.log(idx)
 				node.socket.emit('chain', chain.serialize())
 				node.socket.emit('beginTransacting')
 			})
-			const result = perfy.end('block-generation')
-			timerRunning = false
-			results.push(result)
-			const totalTime = results.reduce((acc, cur) => acc + parseFloat(cur.time, 10), 0)
-			const average = (totalTime / results.length).toFixed(5)
-			console.log(`transaction time: ${result.time}s; total transactions: ${results.length}; average time: ${average}`)
+			try {
+				const result = perfy.end('block-generation')
+				timerRunning = false
+				results.push(result)
+				const totalTime = results.reduce((acc, cur) => acc + parseFloat(cur.time, 10), 0)
+				const average = (totalTime / results.length).toFixed(5)
+				console.log(`block time: ${result.time}s; total blocks computed: ${results.length}; average time: ${average}`)
+				if (results.length === 100) {
+					console.log(`benchmark with ${getTotalNodes()} nodes complete. Exiting...`)
+					process.exit(0)
+				}
+			} catch (err) {
+				//
+			}
 
-
-			readyNodes.length = 0
+			readyNodes = []
 		}
 	})
 
